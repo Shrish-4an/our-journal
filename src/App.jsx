@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 
@@ -20,24 +20,9 @@ function App() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [currentView, setCurrentView] = useState("home");
 
+  // Fetch entries on initial load without WebSockets
   useEffect(() => {
     fetchEntries();
-
-    // Subscribe to live changes from Supabase database
-    const channel = supabase
-      .channel("entries-channel")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "entries" },
-        () => {
-          fetchEntries();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   async function fetchEntries() {
@@ -48,6 +33,8 @@ function App() {
 
     if (!error && data) {
       setEntries(data);
+    } else if (error) {
+      console.error("Error fetching entries:", error.message);
     }
   }
 
@@ -119,6 +106,7 @@ function App() {
       setGrateful("");
       setPhoto(null);
       setCurrentView("home");
+      fetchEntries();
       alert("Entry saved beautifully to cloud! 💗");
     }
   }
@@ -126,7 +114,11 @@ function App() {
   async function deleteEntry(id) {
     if (window.confirm("Are you sure you want to delete this memory? 🥺")) {
       const { error } = await supabase.from("entries").delete().eq("id", id);
-      if (error) alert("Error deleting: " + error.message);
+      if (error) {
+        alert("Error deleting: " + error.message);
+      } else {
+        fetchEntries();
+      }
     }
   }
 
@@ -136,7 +128,11 @@ function App() {
       .update({ is_favorite: !currentStatus })
       .eq("id", id);
 
-    if (error) alert("Error updating favorite: " + error.message);
+    if (error) {
+      alert("Error updating favorite: " + error.message);
+    } else {
+      fetchEntries();
+    }
   }
 
   const currentYear = calendarDate.getFullYear();
@@ -465,9 +461,9 @@ function App() {
                   </div>
                 )}
                 {item.entry && <p className="entry-text">{item.entry}</p>}
-                {item.grateful && (
+                {item.gratitude && (
                   <div className="entry-grateful">
-                    <strong>✨ Grateful for:</strong> {item.grateful}
+                    <strong>✨ Grateful for:</strong> {item.gratitude}
                   </div>
                 )}
               </div>
